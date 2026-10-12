@@ -46,10 +46,6 @@ public class User implements Serializable, UserDetails {
 
     private String address;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
-
     private String phone;
 
     @Column(nullable = true, name = "birth_date")
