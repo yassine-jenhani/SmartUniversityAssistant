@@ -10,9 +10,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Entity
@@ -61,6 +59,9 @@ public class User implements Serializable, UserDetails {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles")
     private Set<UserRole> roles;
+
+    @OneToMany(mappedBy = "sentTo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Notification> notifications = new ArrayList<>();
 
     @Column(name = "profile_picture")
     private String profilePicture;

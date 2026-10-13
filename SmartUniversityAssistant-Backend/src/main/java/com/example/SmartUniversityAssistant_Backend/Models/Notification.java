@@ -28,4 +28,8 @@ public class Notification {
     private LocalDateTime createdAt;
 
     private LocalDateTime readAt;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sent_to", nullable = false, foreignKey = @ForeignKey(name = "FK_NOTIFICATION_USER"))
+    private User sentTo;
 }
