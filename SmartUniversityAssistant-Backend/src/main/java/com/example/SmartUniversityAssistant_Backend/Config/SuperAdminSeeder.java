@@ -45,7 +45,7 @@ public class SuperAdminSeeder {
 
             admin.setFirstName("System");
             admin.setLastName("Administrator");
-            admin.setAdminNumber("001");
+            admin.setAdminNumber("A01");
             admin.setEmail("system.administrator@gmail.com");
             admin.setPassword(passwordEncoder.encode("system**123"));
             admin.setRoles(Set.of(UserRole.SUPER_ADMIN));
@@ -53,7 +53,6 @@ public class SuperAdminSeeder {
             admin.setPhone("+216********");
             admin.setAddress("Tunis");
             admin.setStatus(AccountStatus.ENABLED);
-            admin.setProfilePicture("string");
             admin.setBirthDate(birthDate);
             admin.setGender(Gender.MALE);
             admin.setVerified(true);

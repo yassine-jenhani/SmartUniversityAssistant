@@ -2,7 +2,10 @@ package com.example.SmartUniversityAssistant_Backend.Models;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,7 +22,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-@Builder
+@SuperBuilder
 @EqualsAndHashCode
 @Inheritance(strategy = InheritanceType.JOINED)
 @Table(name = "users")
@@ -42,8 +45,11 @@ public class User implements Serializable, UserDetails {
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
     private String address;
 
+    @Column(nullable = false)
+    @Size(min = 8, message = "The phone number must be at least 8 characters")
     private String phone;
 
     @Column(nullable = true, name = "birth_date")
@@ -62,9 +68,6 @@ public class User implements Serializable, UserDetails {
 
     @OneToMany(mappedBy = "sentTo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Notification> notifications = new ArrayList<>();
-
-    @Column(name = "profile_picture")
-    private String profilePicture;
 
     @Builder.Default
     @Column(name = "is_verified", nullable = false)
