@@ -1,6 +1,7 @@
 package com.example.SmartUniversityAssistant_Backend.Services;
 
 import com.example.SmartUniversityAssistant_Backend.DTOs.Request.AdminRequest;
+import com.example.SmartUniversityAssistant_Backend.DTOs.Request.LoginRequest;
 import com.example.SmartUniversityAssistant_Backend.DTOs.Request.StudentRequest;
 import com.example.SmartUniversityAssistant_Backend.DTOs.Request.TeacherRequest;
 import com.example.SmartUniversityAssistant_Backend.DTOs.Response.JwtAuthenticationResponse;
@@ -9,12 +10,18 @@ import com.example.SmartUniversityAssistant_Backend.Exceptions.ResourceNotFoundE
 import com.example.SmartUniversityAssistant_Backend.Models.*;
 import com.example.SmartUniversityAssistant_Backend.Repositories.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +31,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AdminRepository adminRepository;
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
+    private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final SpecializationRepository specializationRepository;
     private final RefreshTokenService refreshTokenService;
@@ -68,7 +76,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return JwtAuthenticationResponse.builder()
                 .accessToken(jwt)
                 .refreshToken(refreshToken.getToken())
-                .role(assignedRoles.toString())
+                .roles(assignedRoles)
                 .tokenType("Bearer")
                 .isVerified(false)
                 .userId(admin.getId())
@@ -115,7 +123,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return JwtAuthenticationResponse.builder()
                 .accessToken(jwt)
                 .refreshToken(refreshToken.getToken())
-                .role(assignedRoles.toString())
+                .roles(assignedRoles)
                 .tokenType("Bearer")
                 .isVerified(false)
                 .userId(student.getId())
@@ -169,11 +177,59 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return JwtAuthenticationResponse.builder()
                 .accessToken(jwt)
                 .refreshToken(refreshToken.getToken())
-                .role(assignedRoles.toString())
+                .roles(assignedRoles)
                 .tokenType("Bearer")
                 .isVerified(false)
                 .userId(teacher.getId())
                 .build();
     }
 
+    @Override
+    public JwtAuthenticationResponse SignIn(LoginRequest request) {
+
+        // 1. Fetch user from DB first to inspect custom states
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Email or Password"));
+
+        // 2. Check Verification Status -> Returns 403 Forbidden
+        if (!user.isVerified()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Account not verified yet! Please check your email for verification link."
+            );
+        }
+
+        // 3. Check Enabled & Account Status -> Returns 403 Forbidden
+        if (!user.isEnabled() || (user.getStatus() != null && !user.getStatus().equals(AccountStatus.ENABLED))) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Account not enabled or banned! Please contact support or administration to enable your account."
+            );
+        }
+
+        // 4. Authenticate credentials (verifies email and password)
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()));
+        } catch (BadCredentialsException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Email or Password");
+        }
+
+        // 5. Generate JWT & Refresh Token
+        var jwt = jwtService.generateToken(user);
+        var refreshToken = refreshTokenService.createRefreshToken(user);
+
+        Set<UserRole> roles = user.getRoles();
+
+        return JwtAuthenticationResponse.builder()
+                .accessToken(jwt)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .roles(roles)
+                .isVerified(user.isVerified())
+                .userId(user.getId())
+                .build();
+    }
 }

@@ -1,6 +1,7 @@
 package com.example.SmartUniversityAssistant_Backend.RestControllers;
 
 import com.example.SmartUniversityAssistant_Backend.DTOs.Request.AdminRequest;
+import com.example.SmartUniversityAssistant_Backend.DTOs.Request.LoginRequest;
 import com.example.SmartUniversityAssistant_Backend.DTOs.Request.StudentRequest;
 import com.example.SmartUniversityAssistant_Backend.DTOs.Request.TeacherRequest;
 import com.example.SmartUniversityAssistant_Backend.DTOs.Response.JwtAuthenticationResponse;
@@ -11,8 +12,10 @@ import com.example.SmartUniversityAssistant_Backend.Repositories.UserRepository;
 import com.example.SmartUniversityAssistant_Backend.Services.AuthenticationService;
 import com.example.SmartUniversityAssistant_Backend.Services.JwtServiceImpl;
 import com.example.SmartUniversityAssistant_Backend.Services.RefreshTokenService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.json.JSONObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,8 +72,30 @@ public class AuthenticationRestController {
                         .accessToken(newToken)
                         .refreshToken(refreshToken)
                         .userId(user.getId())
-                        .role(user.getRoles().toString())
+                        .roles(user.getRoles())
                         .build()
         );
+    }
+
+    @PostMapping("/signin")
+    public ResponseEntity<JwtAuthenticationResponse> SignIn(@Valid @RequestBody LoginRequest request, HttpServletResponse response){
+
+        JwtAuthenticationResponse jwtResponse = authenticationService.SignIn(request);
+
+        if (jwtResponse != null && jwtResponse.getAccessToken() != null) {
+            // set the token in the response header
+            response.setHeader("Access-Control-Expose-Headers", "Authorization");
+            response.setHeader("Access-Control-Allow-Headers", "Authorization, X-Pingother, Origin, X-Requested-With, " +
+                    "Content-Type, Accept, X-Custom-Token");
+            response.setHeader("Authorization", "Bearer " + jwtResponse.getAccessToken());
+            // Return a response with user details in the body
+            JSONObject responseBody = new JSONObject();
+            responseBody.put("userId", jwtResponse.getUserId());
+            responseBody.put("role", jwtResponse.getRoles());
+            return ResponseEntity.ok(jwtResponse);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+
     }
 }
