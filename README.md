@@ -1,1 +1,6 @@
-"# SmartUniversityAssistant" 
+"# SmartUniversityAssistant"
+
+
+
+guardrails
+

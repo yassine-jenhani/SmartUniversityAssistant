@@ -8,6 +8,8 @@ MODEL_NAME = os.getenv(
     "smartuni-assistant"
 )
 
+EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "bge-m3")
+
 OLLAMA_BASE_URL = os.getenv(
     "OLLAMA_BASE_URL",
     "http://localhost:11434"
