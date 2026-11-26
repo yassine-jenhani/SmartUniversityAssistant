@@ -1,10 +1,11 @@
+
 from app.core.database import SessionLocal
 from app.services.rag_service import answer_question
 
 
 def test_rag():
 
-    question = "What are the steps to create an EC2 instance?"
+    question = "Comment lancer des instances EC2 avec un Auto Scaling Group ?"
 
     db = SessionLocal()
 
@@ -23,11 +24,11 @@ def test_rag():
         print("\nGENERATED ANSWER:")
         print(result["answer"])
 
-        print("\nSOURCES:")
+        print("\nSOURCE CITATIONS:")
 
         for source in result["sources"]:
             print(
-                f"Document ID: {source['document_id']} | "
+                f"Document: {source['document_name']} | "
                 f"Page: {source['page_number']} | "
                 f"Similarity: {source['similarity']}"
             )

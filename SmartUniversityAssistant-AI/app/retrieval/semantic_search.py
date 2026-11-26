@@ -1,7 +1,8 @@
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.vectorstore.models import DocumentChunk
+from app.vectorstore.models import Document, DocumentChunk
 from app.embeddings.embedding_service import generate_embedding
 
 
@@ -17,16 +18,15 @@ def search_similar_chunks(
     if top_k <= 0:
         raise ValueError("top_k must be positive")
 
-    # 1. Convert the student's question into an embedding
     query_embedding = generate_embedding(query)
 
-    # 2. Calculate cosine distance and retrieve the closest chunks
     distance = DocumentChunk.embedding.cosine_distance(query_embedding)
 
     statement = (
-        select(
-            DocumentChunk,
-            distance.label("distance")
+        select(DocumentChunk, Document, distance.label("distance"))
+        .join(
+            Document,
+            DocumentChunk.document_id == Document.id
         )
         .order_by(distance)
         .limit(top_k)
@@ -34,13 +34,13 @@ def search_similar_chunks(
 
     results = db.execute(statement).all()
 
-    # 3. Format the retrieved results
     retrieved_chunks = []
 
-    for chunk, distance_value in results:
+    for chunk, document, distance_value in results:
         retrieved_chunks.append({
             "chunk_id": chunk.id,
             "document_id": chunk.document_id,
+            "document_name": document.filename,
             "page_number": chunk.page_number,
             "chunk_index": chunk.chunk_index,
             "content": chunk.content,
