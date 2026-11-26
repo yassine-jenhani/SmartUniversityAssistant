@@ -4,16 +4,18 @@ from app.retrieval.semantic_search import search_similar_chunks
 
 def test_semantic_search():
 
-    question = "Comment lancer des instances EC2 avec un Auto Scaling Group ?"
+    question = "Explain the Transformer architecture in deep learning."
 
     db = SessionLocal()
 
     try:
         results = search_similar_chunks(
-            db=db,
-            query=question,
-            top_k=3
-        )
+        db=db,
+        query=question,
+        top_k=3,
+        min_similarity=0.55
+
+)
 
         print("\n========== SEMANTIC SEARCH RESULTS ==========")
         print(f"Question: {question}")

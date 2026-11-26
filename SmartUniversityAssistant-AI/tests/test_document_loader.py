@@ -1,6 +1,6 @@
 from app.ingestion.document_loader import extract_document
 
-file_path = "data/sample.pdf"
+file_path = "data/Règlement Intérieur de l'Université.pdf"
 
 result = extract_document(file_path)
 

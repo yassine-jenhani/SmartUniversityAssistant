@@ -1,7 +1,11 @@
+
 from sqlalchemy.orm import Session
 
 from app.retrieval.semantic_search import search_similar_chunks
 from app.services.llm_service import generate_answer
+
+
+MIN_SIMILARITY = 0.55
 
 
 def answer_question(
@@ -13,20 +17,26 @@ def answer_question(
     if not question or not question.strip():
         raise ValueError("Question cannot be empty")
 
+    # 1. Retrieve only sufficiently relevant chunks
     retrieved_chunks = search_similar_chunks(
         db=db,
         query=question,
-        top_k=top_k
+        top_k=top_k,
+        min_similarity=MIN_SIMILARITY
     )
 
+    # 2. Handle questions with no relevant information
     if not retrieved_chunks:
         return {
             "question": question,
-            "answer": "I couldn't find relevant information in the available documents.",
+            "answer": (
+                "I couldn't find sufficient relevant information "
+                "to answer your question in the available university documents."
+            ),
             "sources": []
         }
 
-    # Build context for the LLM
+    # 3. Build context for the LLM
     context_parts = []
 
     for index, chunk in enumerate(retrieved_chunks, start=1):
@@ -43,15 +53,14 @@ Content:
 
     context = "\n\n".join(context_parts)
 
-    # Generate answer
+    # 4. Generate the answer
     answer = generate_answer(
         question=question,
         context=context
     )
 
-    # Build source citations
+    # 5. Build unique source citations
     sources = []
-
     seen_sources = set()
 
     for chunk in retrieved_chunks:
@@ -71,6 +80,7 @@ Content:
                 "similarity": chunk["similarity"]
             })
 
+    # 6. Return final RAG response
     return {
         "question": question,
         "answer": answer,

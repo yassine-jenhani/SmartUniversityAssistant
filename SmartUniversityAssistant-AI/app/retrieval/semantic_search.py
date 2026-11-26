@@ -9,7 +9,8 @@ from app.embeddings.embedding_service import generate_embedding
 def search_similar_chunks(
     db: Session,
     query: str,
-    top_k: int = 5
+    top_k: int = 5,
+    min_similarity=0.55
 ) -> list[dict]:
 
     if not query or not query.strip():
@@ -17,6 +18,12 @@ def search_similar_chunks(
 
     if top_k <= 0:
         raise ValueError("top_k must be positive")
+
+    if (
+    min_similarity is not None
+    and not 0 <= min_similarity <= 1
+    ):
+        raise ValueError("min_similarity must be between 0 and 1")
 
     query_embedding = generate_embedding(query)
 
@@ -37,6 +44,19 @@ def search_similar_chunks(
     retrieved_chunks = []
 
     for chunk, document, distance_value in results:
+            retrieved_chunks = []
+
+    for chunk, document, distance_value in results:
+
+        similarity = round(1 - distance_value, 4)
+
+        # Filter irrelevant chunks when a threshold is provided
+        if (
+            min_similarity is not None
+            and similarity < min_similarity
+        ):
+            continue
+
         retrieved_chunks.append({
             "chunk_id": chunk.id,
             "document_id": chunk.document_id,
@@ -44,7 +64,9 @@ def search_similar_chunks(
             "page_number": chunk.page_number,
             "chunk_index": chunk.chunk_index,
             "content": chunk.content,
-            "similarity": round(1 - distance_value, 4)
+            "similarity": similarity
         })
 
     return retrieved_chunks
+
+    

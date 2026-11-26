@@ -5,7 +5,7 @@ from app.services.rag_service import answer_question
 
 def test_rag():
 
-    question = "Comment lancer des instances EC2 avec un Auto Scaling Group ?"
+    question = "How can I implement JWT authentication using Spring Boot?"
 
     db = SessionLocal()
 
