@@ -1,8 +1,14 @@
-
 from sqlalchemy.orm import Session
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from app.retrieval.semantic_search import search_similar_chunks
-from app.services.llm_service import generate_answer
+from app.services.llm_service import (
+    generate_answer,
+    rewrite_question
+)
 
 
 MIN_SIMILARITY = 0.55
@@ -11,21 +17,30 @@ MIN_SIMILARITY = 0.55
 def answer_question(
     db: Session,
     question: str,
-    top_k: int = 3
+    top_k: int = 3,
+    conversation_history: list[dict] | None = None
 ) -> dict:
 
     if not question or not question.strip():
         raise ValueError("Question cannot be empty")
 
-    # 1. Retrieve only sufficiently relevant chunks
+    # 1. Rewrite the question using conversation history
+    search_question = rewrite_question(
+        question=question,
+        conversation_history=conversation_history or []
+    )
+
+    logger.info("RAG search question: %s", search_question)
+
+    # 2. Retrieve relevant chunks using the contextualized question
     retrieved_chunks = search_similar_chunks(
         db=db,
-        query=question,
+        query=search_question,
         top_k=top_k,
         min_similarity=MIN_SIMILARITY
     )
 
-    # 2. Handle questions with no relevant information
+    # 3. Handle questions with no relevant information
     if not retrieved_chunks:
         return {
             "question": question,
@@ -36,7 +51,7 @@ def answer_question(
             "sources": []
         }
 
-    # 3. Build context for the LLM
+    # 4. Build context for the LLM
     context_parts = []
 
     for index, chunk in enumerate(retrieved_chunks, start=1):
@@ -53,13 +68,14 @@ Content:
 
     context = "\n\n".join(context_parts)
 
-    # 4. Generate the answer
+    # 5. Generate the answer
     answer = generate_answer(
-        question=question,
+        question=search_question,
+        original_question=question,
         context=context
     )
 
-    # 5. Build unique source citations
+    # 6. Build unique source citations
     sources = []
     seen_sources = set()
 
@@ -80,7 +96,7 @@ Content:
                 "similarity": chunk["similarity"]
             })
 
-    # 6. Return final RAG response
+    # 7. Return final RAG response
     return {
         "question": question,
         "answer": answer,

@@ -1,9 +1,13 @@
 
+import logging
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.vectorstore.models import Document, DocumentChunk
 from app.embeddings.embedding_service import generate_embedding
+
+logger = logging.getLogger(__name__)
 
 
 def search_similar_chunks(
@@ -19,10 +23,7 @@ def search_similar_chunks(
     if top_k <= 0:
         raise ValueError("top_k must be positive")
 
-    if (
-    min_similarity is not None
-    and not 0 <= min_similarity <= 1
-    ):
+    if min_similarity is not None and not 0 <= min_similarity <= 1:
         raise ValueError("min_similarity must be between 0 and 1")
 
     query_embedding = generate_embedding(query)
@@ -44,13 +45,9 @@ def search_similar_chunks(
     retrieved_chunks = []
 
     for chunk, document, distance_value in results:
-            retrieved_chunks = []
-
-    for chunk, document, distance_value in results:
 
         similarity = round(1 - distance_value, 4)
 
-        # Filter irrelevant chunks when a threshold is provided
         if (
             min_similarity is not None
             and similarity < min_similarity
@@ -67,6 +64,15 @@ def search_similar_chunks(
             "similarity": similarity
         })
 
-    return retrieved_chunks
+    # Debugging: display retrieved documents
+    logger.warning("Retrieved chunks: %d", len(retrieved_chunks))
 
-    
+    for chunk in retrieved_chunks:
+        logger.warning(
+            "Document: %s | Page: %s | Similarity: %.4f",
+            chunk["document_name"],
+            chunk["page_number"],
+            chunk["similarity"]
+        )
+
+    return retrieved_chunks
